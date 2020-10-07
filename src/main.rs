@@ -47,6 +47,7 @@ fn run() -> Result<(), Box<dyn Error>> {
     let file_path = get_first_arg()?;
     let file = File::open(file_path)?;
     let mut rdr = csv::ReaderBuilder::new()
+        .has_headers(false)
         .comment(Some(b'#'))
         .from_reader(file);
     for result in rdr.records() {
