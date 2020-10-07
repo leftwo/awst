@@ -43,8 +43,8 @@ struct Node {
     instance: u32,
 }
 
-fn run() -> Result<(), Box<dyn Error>> {
-    let file_path = get_first_arg()?;
+fn run(file_path: &OsString) -> Result<(), Box<dyn Error>> {
+    // let file_path = get_first_arg()?;
     let file = File::open(file_path)?;
     let mut rdr = csv::ReaderBuilder::new()
         .has_headers(false)
@@ -84,7 +84,12 @@ fn get_first_arg() -> Result<OsString, Box<dyn Error>> {
 }
 
 fn main() {
-    if let Err(err) = run() {
+    let filename = get_first_arg().unwrap_or_else(|err| {
+        println!("{}", err);
+        process::exit(1);
+    });
+
+    if let Err(err) = run(&filename) {
         println!("{}", err);
         process::exit(1);
     }
