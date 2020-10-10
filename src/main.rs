@@ -27,6 +27,13 @@ use std::fs::File;
 use std::process;
 
 #[derive(Debug)]
+struct Cluster {
+    nodes: Vec<Node>,
+    vpc: String,
+    region: String,
+    units: u32,
+}
+#[derive(Debug)]
 struct Node {
     instance_id: String,
     name: String,
@@ -37,22 +44,60 @@ struct Node {
     efs_id: String,
     subnet: String,
     security_group: String,
-    vpc: String,
-    region: String,
     unit: u32,
     instance: u32,
 }
 
-fn run(file_path: &OsString) -> Result<(), Box<dyn Error>> {
+fn read_cluster(file_path: &OsString) -> Result<(), Box<dyn Error>> {
     // let file_path = get_first_arg()?;
+    let vpc: String;
+    let region: String;
+    let mut nodes: Vec<Node>;
+
     let file = File::open(file_path)?;
     let mut rdr = csv::ReaderBuilder::new()
         .has_headers(false)
         .comment(Some(b'#'))
         .from_reader(file);
+
+    if let Some(result) = rdr.records().next() {
+        let record = result?;
+        println!("First result {:?}", result);
+    } else {
+        return Err(From::from("expected at least one record but got none"))
+    } 
+
+/*
+    let record = match rdr.records().next() {
+        Some(result) => result
+    if result == None {
+
+    let record = result;
+
+    let n: Node = Node {
+        instance_id: record[0].to_string(),
+        name: record[1].to_string(),
+        pub_ip: record[2].to_string(),
+        pri_ip: record[3].to_string(),
+        volume_id: record[4].to_string(),
+        role: record[5].to_string(),
+        efs_id: record[6].to_string(),
+        subnet: record[7].to_string(),
+        security_group: record[8].to_string(),
+        unit: record[11].to_string().parse().unwrap(),
+        instance: record[12].to_string().parse().unwrap(),
+    };
+    let my_cluster: Cluster = Cluster {
+        vpc: record[9].to_string(),
+        region: record[10].to_string(),
+        units: 1,
+        nodes: vec![n],
+    };
+
+    println!("we got: {:?}", my_cluster);
+*/
     for result in rdr.records() {
         let record = result?;
-        // println!("{:?}", record);
         let tstr = record[11].to_string();
         let n: Node = Node {
             instance_id: record[0].to_string(),
@@ -64,12 +109,11 @@ fn run(file_path: &OsString) -> Result<(), Box<dyn Error>> {
             efs_id: record[6].to_string(),
             subnet: record[7].to_string(),
             security_group: record[8].to_string(),
-            vpc: record[9].to_string(),
-            region: record[10].to_string(),
             unit: tstr.parse().unwrap(),
             instance: record[12].to_string().parse().unwrap(),
         };
         println!("we got: {:?}", n);
+        // my_cluster.nodes.push(n);
     }
     Ok(())
 }
@@ -89,7 +133,7 @@ fn main() {
         process::exit(1);
     });
 
-    if let Err(err) = run(&filename) {
+    if let Err(err) = read_cluster(&filename) {
         println!("{}", err);
         process::exit(1);
     }
