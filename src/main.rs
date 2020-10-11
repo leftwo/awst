@@ -1,24 +1,8 @@
 /*
  * Read in the cluster file (output from other scripts).
- * Convert this to something more structured.
+ * Convert the contents of that file to something more structured.
  *
- * This version expects the first line to be the header.
- * Below is the format of the cluster file that I need to import
-
-# Cluster created on Fri Oct  2 08:26:03 PDT 2020 by ubuntu on host ohiokube
-#instance_id,name,public_ip,private_ip,volume_id,role,efsid,subnet,security-group,vpc,region,unit,instance
-# VPC vpc-0c6171d6bc60ffcbb
-# AWS_REGION us-east-2
-# MS_VPC_INFO sg-0a697e667b65da583 subnet-03137f7b1dca57f48, rtb-022b10b7021c0301d igw-0ff13bdd1223675e6 vpc-0c6171d6bc60ffcbb
-# VPC_INFO sg-0ae887d1039187111 subnet-0f7a5e07b5e1ed597, rtb-022b10b7021c0301d igw-0ff13bdd1223675e6 vpc-0c6171d6bc60ffcbb
-i-073b92a9037913280,ueb-BASE-0-0-0,18.216.95.92,10.0.16.70, vol-0682b627cda5807a7 vol-0ad146c89478e76b1,BASE,NONE,subnet-0f7a5e07b5e1ed597,sg-0ae887d1039187111,vpc-0c6171d6bc60ffcbb,us-east-2,0,0
-i-0e635b5061b10ab4e,ueb-EDGE-0-0-0,52.15.209.56,10.0.16.60, vol-03fd6cb31a6b3f760 vol-00bd82f4b3718499c,EDGE,NONE,subnet-0f7a5e07b5e1ed597,sg-0ae887d1039187111,vpc-0c6171d6bc60ffcbb,us-east-2,0,0
-
- * The next steps are going to be to convert this into some json formatted file and
- * then output that file.  Future program should make use of importing the json
- * file.
  */
-
 extern crate csv;
 use std::env;
 use std::error::Error;
@@ -27,14 +11,14 @@ use std::fs::File;
 use std::process;
 
 #[derive(Debug)]
-struct Cluster {
+pub struct Cluster {
     nodes: Vec<Node>,
     vpc: String,
     region: String,
     units: u32,
 }
 #[derive(Debug)]
-struct Node {
+pub struct Node {
     instance_id: String,
     name: String,
     pub_ip: String,
@@ -48,8 +32,7 @@ struct Node {
     instance: u32,
 }
 
-fn read_cluster(file_path: &OsString) -> Result<(), Box<dyn Error>> {
-    // let file_path = get_first_arg()?;
+fn read_cluster(file_path: &OsString) -> Result<Cluster, Box<dyn Error>> {
     let vpc: String;
     let region: String;
     let mut nodes: Vec<Node> = Vec::with_capacity(1);
@@ -80,7 +63,7 @@ fn read_cluster(file_path: &OsString) -> Result<(), Box<dyn Error>> {
         // println!("First result {:?}", n);
         nodes.push(n);
     } else {
-        return Err(From::from("expected at least one record but got none"))
+        return Err(From::from("Found no records in cluster file"))
     } 
 
     
@@ -109,8 +92,7 @@ fn read_cluster(file_path: &OsString) -> Result<(), Box<dyn Error>> {
         units: 1,
         nodes: nodes,
     };
-    println!("we got: {:?}", my_cluster);
-    Ok(())
+    Ok(my_cluster)
 }
 
 /// Returns the first positional argument sent to this process. If there are no
@@ -128,13 +110,50 @@ fn main() {
         process::exit(1);
     });
 
-    if let Err(err) = read_cluster(&filename) {
+    let cluster = read_cluster(&filename).unwrap_or_else(|err| {
         println!("{}", err);
         process::exit(1);
-    }
+    });
+    println!("We got: {:?}", cluster);
 }
 
 #[test]
-fn it_works() {
-    assert_eq!(2 + 2, 4);
+fn basic() {
+    let filename = OsString::from("./tests/example-0_cluster");
+    let _cluster = read_cluster(&filename).unwrap_or_else(|err| {
+        println!("{}", err);
+        process::exit(1);
+    });
+}
+#[test]
+fn big() {
+    let filename = OsString::from("./tests/big-0_cluster");
+    let _cluster = read_cluster(&filename).unwrap_or_else(|err| {
+        println!("{}", err);
+        process::exit(1);
+    });
+}
+#[test]
+fn one() {
+    let filename = OsString::from("./tests/one-0_cluster");
+    let _cluster = read_cluster(&filename).unwrap_or_else(|err| {
+        println!("{}", err);
+        process::exit(1);
+    });
+}
+#[test]
+fn empty() {
+    let filename = OsString::from("./tests/empty-0_cluster");
+    match read_cluster(&filename) {
+        Ok(_) => panic!("This should not pass"),
+        Err(_) => println!("Expected error"),
+    }
+}
+#[test]
+fn partial() {
+    let filename = OsString::from("./tests/partial-0_cluster");
+    match read_cluster(&filename) {
+        Ok(_) => panic!("This should not pass"),
+        Err(_) => println!("Expected error"),
+    }
 }
