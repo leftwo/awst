@@ -64,9 +64,8 @@ fn read_cluster(file_path: &OsString) -> Result<Cluster, Box<dyn Error>> {
         nodes.push(n);
     } else {
         return Err(From::from("Found no records in cluster file"))
-    } 
+    }
 
-    
     for result in rdr.records() {
         let record = result?;
         let n: Node = Node {
